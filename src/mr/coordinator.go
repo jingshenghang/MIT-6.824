@@ -1,10 +1,13 @@
 package mr
 
-import "log"
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
+import (
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+)
 
 
 type Coordinator struct {
@@ -29,6 +32,7 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 // start a thread that listens for RPCs from worker.go
 //
 func (c *Coordinator) server() {
+	fmt.Println("Server listening...")
 	rpc.Register(c)
 	rpc.HandleHTTP()
 	//l, e := net.Listen("tcp", ":1234")
@@ -60,8 +64,10 @@ func (c *Coordinator) Done() bool {
 // nReduce is the number of reduce tasks to use.
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
-	c := Coordinator{}
 
+	fmt.Println("Starting coordinator")
+	c := Coordinator{}
+	fmt.Println("Coordinator started")
 	// Your code here.
 
 
