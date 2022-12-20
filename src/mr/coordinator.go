@@ -7,8 +7,22 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"strconv"
 )
 
+var filePathList []string
+var index int
+
+func DeleteSlice(a []string, elem string) []string {
+	j := 0
+	for _, v := range a {
+		if v != elem {
+			a[j] = v
+			j++
+		}
+	}
+	return a[:j]
+}
 
 type Coordinator struct {
 	// Your definitions here.
@@ -27,6 +41,36 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
+func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveReply) error {
+
+	if len(filePathList) > 0 {
+		index = (index + 1) % len(filePathList)
+		reply.FilePathList = append(reply.FilePathList, filePathList[index])
+		
+	} 
+	
+	return nil
+}
+
+
+// 传入完成的文件id，kva结果
+func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) error {
+
+	for _, file := range args.FilePathList {
+			filePathList = DeleteSlice(filePathList, file)
+	}
+
+	fmt.Println("Remining " + strconv.Itoa(len(filePathList)) + " files")
+
+	
+	if len(filePathList) == 0 {
+		reply.IsDone = true
+	} else {
+		reply.IsDone = false
+	}
+
+	return nil
+}
 
 //
 // start a thread that listens for RPCs from worker.go
@@ -53,7 +97,9 @@ func (c *Coordinator) Done() bool {
 	ret := false
 
 	// Your code here.
-
+	if len(filePathList) == 0 { // 需不需要加锁？
+		ret = true
+	}
 
 	return ret
 }
@@ -64,13 +110,19 @@ func (c *Coordinator) Done() bool {
 // nReduce is the number of reduce tasks to use.
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
+		// Your code here.
+
 
 	fmt.Println("Starting coordinator")
-	c := Coordinator{}
-	fmt.Println("Coordinator started")
-	// Your code here.
+	// initialization
 
+	c := Coordinator{}
+	filePathList = files
+	//doneList = make(map[string]bool)
+	index = 0
 
 	c.server()
+
+	fmt.Println("Coordinator started")
 	return &c
 }

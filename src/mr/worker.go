@@ -3,8 +3,10 @@ package mr
 import (
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"log"
 	"net/rpc"
+	"os"
 )
 
 //
@@ -35,6 +37,44 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 
 	fmt.Println("Worker started")
+	isDone := false
+	var kva []KeyValue
+
+	for isDone != true {
+
+		// 1. notice coordinator and receive the file name
+		// CallExample()
+		filePathList := CallWorkerActive()
+		if len(filePathList) == 0 {
+			fmt.Println("receive zero file for map, finish mapping")
+			break;
+		}
+		// 2. do map process
+		
+
+		for _, filePath := range filePathList {
+			
+			file, err := os.Open(filePath)
+			if err != nil {
+				log.Fatalf("cannot open %v", filePath)
+			}
+			content, err := ioutil.ReadAll(file)
+			if err != nil {
+				log.Fatalf("cannot read %v", file)
+			}
+			file.Close()
+			temp := mapf(filePath, string(content))
+			kva = append(kva, temp...)
+			fmt.Println("finish task from file " + filePath)
+		}
+
+		// 3. report done
+		isDone = CallFinishMap(filePathList, kva)
+		
+	} 
+
+	fmt.Printf("finish all map task")
+
 
 
 
@@ -44,6 +84,26 @@ func Worker(mapf func(string, string) []KeyValue,
 	// CallExample()
 
 }
+
+func CallWorkerActive() []string {
+	args := WorkerActiveArgs{}
+	reply := WorkerActiveReply{}
+
+	call("Coordinator.ActiveWorker", &args, &reply)
+
+	return reply.FilePathList
+}
+
+func CallFinishMap(filePathList []string, kva []KeyValue) bool {
+	args := FinishMapArgs{}
+	reply := FinishMapReply{}
+	args.FilePathList = append(args.FilePathList, filePathList...)
+	args.kva = append(args.kva, kva...)
+
+	call("Coordinator.FinishMap", &args, &reply)
+
+	return reply.IsDone
+}	
 
 //
 // example function to show how to make an RPC call to the coordinator.
