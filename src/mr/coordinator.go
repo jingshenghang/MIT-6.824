@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
-	"strconv"
 )
 
 var filePathList []string
 var index int
+var IntermediateMap []KeyValue
+var flag bool = false
 
 func DeleteSlice(a []string, elem string) []string {
 	j := 0
@@ -46,7 +47,6 @@ func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveRe
 	if len(filePathList) > 0 {
 		index = (index + 1) % len(filePathList)
 		reply.FilePathList = append(reply.FilePathList, filePathList[index])
-		
 	} 
 	
 	return nil
@@ -59,9 +59,9 @@ func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) erro
 	for _, file := range args.FilePathList {
 			filePathList = DeleteSlice(filePathList, file)
 	}
+	IntermediateMap = append(IntermediateMap, args.Kva...)
 
-	fmt.Println("Remining " + strconv.Itoa(len(filePathList)) + " files")
-
+	// fmt.Println("Remining " + strconv.Itoa(len(filePathList)) + " files")
 	
 	if len(filePathList) == 0 {
 		reply.IsDone = true
@@ -69,6 +69,18 @@ func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) erro
 		reply.IsDone = false
 	}
 
+	return nil
+}
+
+func (c *Coordinator) StartReduce(args *StartReduceArgs, reply *StartReduceReply) error {
+
+	reply.Kva = IntermediateMap
+	return nil
+}
+
+func (c *Coordinator) FinishReduce(args *FinishReduceArgs, reply *FinishReduceReply) error {
+
+	flag = true
 	return nil
 }
 
@@ -97,7 +109,12 @@ func (c *Coordinator) Done() bool {
 	ret := false
 
 	// Your code here.
-	if len(filePathList) == 0 { // 需不需要加锁？
+	if len(filePathList) == -1 { // 需不需要加锁？ // 需要修改
+		ret = true
+	}
+
+	// for test
+	if flag == true {
 		ret = true
 	}
 
@@ -118,7 +135,6 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	c := Coordinator{}
 	filePathList = files
-	//doneList = make(map[string]bool)
 	index = 0
 
 	c.server()

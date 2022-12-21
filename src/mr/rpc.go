@@ -36,14 +36,28 @@ type WorkerActiveReply struct {
 
 type FinishMapArgs struct {
 	FilePathList []string
-	kva []KeyValue
+	Kva []KeyValue
 }
 
 type FinishMapReply struct {
 	IsDone bool
 }
 
+type StartReduceArgs struct {
+	X int
+}
 
+type StartReduceReply struct {
+	Kva []KeyValue
+}
+
+type FinishReduceArgs struct {
+	X int
+}
+
+type FinishReduceReply struct {
+	Kva []KeyValue
+}
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.
 // Can't use the current directory since

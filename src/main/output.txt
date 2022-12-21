@@ -1,0 +1,148 @@
+*** Starting wc test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+Worker started
+unexpected EOF
+unexpected EOF
+--- wc output is not the same as mr-correct-wc.txt
+--- wc test: FAIL
+*** Starting indexer test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+read unix @->/var/tmp/824-mr-1000: read: connection reset by peer
+receive zero file for map, finish mapping
+unexpected EOF
+finish all map task
+start reduce task
+--- indexer output is not the same as mr-correct-indexer.txt
+--- indexer test: FAIL
+*** Starting map parallelism test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+Worker finished
+Worker finished
+--- map parallelism test: PASS
+*** Starting reduce parallelism test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+Worker finished
+Worker finished
+--- reduce parallelism test: PASS
+*** Starting job count test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+finish all map task
+start reduce task
+Worker finished
+finish all map task
+start reduce task
+Worker finished
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker finished
+Worker finished
+--- map jobs ran incorrect number of times (10 != 8)
+--- job count test: FAIL
+*** Starting early exit test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+Worker started
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+Worker finished
+Worker finished
+Worker finished
+--- early exit test: PASS
+*** Starting crash test.
+Starting coordinator
+Server listening...
+Coordinator started
+Worker started
+Worker started
+Worker started
+Worker started
+Worker started
+Worker started
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker finished
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+mr-crash-all mr-correct-crash.txt differ: byte 32, line 1
+--- crash output is not the same as mr-correct-crash.txt
+--- crash test: FAIL
+*** FAILED SOME TESTS

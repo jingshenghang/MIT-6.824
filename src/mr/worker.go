@@ -7,7 +7,16 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"sort"
 )
+
+// for sorting by key.
+type ByKey []KeyValue
+
+// for sorting by key.
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 //
 // Map functions return a slice of KeyValue.
@@ -39,6 +48,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	fmt.Println("Worker started")
 	isDone := false
 	var kva []KeyValue
+	// var reduceResult []KeyValue
 
 	for isDone != true {
 
@@ -65,7 +75,6 @@ func Worker(mapf func(string, string) []KeyValue,
 			file.Close()
 			temp := mapf(filePath, string(content))
 			kva = append(kva, temp...)
-			fmt.Println("finish task from file " + filePath)
 		}
 
 		// 3. report done
@@ -73,11 +82,38 @@ func Worker(mapf func(string, string) []KeyValue,
 		
 	} 
 
-	fmt.Printf("finish all map task")
+	fmt.Println("finish all map task")
+	
 
+	// 4. start reduce task
+	fmt.Println("start reduce task")
+	kva = CallStartReduce()
 
+	// 5. type Sort
+	sort.Sort(ByKey(kva))
 
+	oname := "mr-out-0"
+	ofile, _ := os.Create(oname)
 
+	i := 0
+	for i < len(kva) {
+		j := i + 1
+		for j < len(kva) && kva[j].Key == kva[i].Key {
+			j++
+		}
+		values := []string{}
+		for k := i; k < j; k++ {
+			values = append(values, kva[k].Value)
+		}
+		output := reducef(kva[i].Key, values)
+
+		// this is the correct format for each line of Reduce output.
+		fmt.Fprintf(ofile, "%v %v\n", kva[i].Key, output)
+
+		i = j
+	}
+
+	CallFinishReduce()
 	fmt.Println("Worker finished")
 
 	// uncomment to send the Example RPC to the coordinator.
@@ -98,12 +134,28 @@ func CallFinishMap(filePathList []string, kva []KeyValue) bool {
 	args := FinishMapArgs{}
 	reply := FinishMapReply{}
 	args.FilePathList = append(args.FilePathList, filePathList...)
-	args.kva = append(args.kva, kva...)
+	args.Kva = append(args.Kva, kva...)
 
 	call("Coordinator.FinishMap", &args, &reply)
 
 	return reply.IsDone
 }	
+
+func CallStartReduce() []KeyValue {
+	args := StartReduceArgs{}
+	reply := StartReduceReply{}
+
+	call("Coordinator.StartReduce", &args, &reply)
+
+	return reply.Kva
+}
+
+func CallFinishReduce()  {
+	args := StartReduceArgs{}
+	reply := StartReduceReply{}
+	call("Coordinator.FinishReduce", &args, &reply)
+}
+
 
 //
 // example function to show how to make an RPC call to the coordinator.
