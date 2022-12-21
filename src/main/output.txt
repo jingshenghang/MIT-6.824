@@ -1,3 +1,4 @@
+Correct Total number of words is 623948
 *** Starting wc test.
 Starting coordinator
 Server listening...
@@ -5,21 +6,48 @@ Coordinator started
 Worker started
 Worker started
 Worker started
-unexpected EOF
-unexpected EOF
---- wc output is not the same as mr-correct-wc.txt
---- wc test: FAIL
+initNun is 8, now len is 78329 
+initNun is 7, now len is 83498 
+initNun is 6, now len is 105203 
+initNun is 5, now len is 25528 
+initNun is 4, now len is 77488 
+initNun is 3, now len is 24130 
+initNun is 2, now len is 108992 
+initNun is 1, now len is 120780 
+Total number of words is 623948
+finish all map task
+start reduce task
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Total number of words is 623948
+finish all map task
+start reduce task
+Worker finished
+--- wc test: PASS
+Correct Total number of words is 52580
 *** Starting indexer test.
 Starting coordinator
 Server listening...
 Coordinator started
 Worker started
 Worker started
-read unix @->/var/tmp/824-mr-1000: read: connection reset by peer
-receive zero file for map, finish mapping
-unexpected EOF
+initNun is 8, now len is 7718 
+initNun is 7, now len is 7765 
+initNun is 6, now len is 8788 
+initNun is 5, now len is 7398 
+initNun is 4, now len is 3419 
+initNun is 3, now len is 5767 
+initNun is 2, now len is 8483 
+initNun is 1, now len is 3242 
+Total number of words is 52580
 finish all map task
 start reduce task
+Total number of words is 52580
+finish all map task
+start reduce task
+Worker finished
+mr-indexer-all mr-correct-indexer.txt differ: byte 1373099, line 21345
 --- indexer output is not the same as mr-correct-indexer.txt
 --- indexer test: FAIL
 *** Starting map parallelism test.
@@ -28,38 +56,66 @@ Server listening...
 Coordinator started
 Worker started
 Worker started
+initNun is 8, now len is 2 
+initNun is 7, now len is 2 
+initNun is 6, now len is 2 
+initNun is 5, now len is 2 
+initNun is 4, now len is 2 
+initNun is 3, now len is 2 
+initNun is 2, now len is 2 
+initNun is 1, now len is 2 
+Total number of words is 16
 finish all map task
 start reduce task
-finish all map task
-start reduce task
-Worker finished
 Worker finished
 --- map parallelism test: PASS
+Total number of words is 16
+finish all map task
+start reduce task
 *** Starting reduce parallelism test.
 Starting coordinator
 Server listening...
 Coordinator started
 Worker started
 Worker started
+initNun is 8, now len is 10 
+initNun is 7, now len is 10 
+initNun is 6, now len is 10 
+initNun is 5, now len is 10 
+initNun is 4, now len is 10 
+initNun is 3, now len is 10 
+initNun is 2, now len is 10 
+initNun is 1, now len is 10 
+Total number of words is 80
 finish all map task
 start reduce task
+Total number of words is 80
 finish all map task
 start reduce task
 Worker finished
-Worker finished
---- reduce parallelism test: PASS
+--- too few parallel reduces.
+--- reduce parallelism test: FAIL
 *** Starting job count test.
 Starting coordinator
 Server listening...
 Coordinator started
 Worker started
 Worker started
+initNun is 8, now len is 1 
+initNun is 7, now len is 1 
+initNun is 6, now len is 1 
+initNun is 5, now len is 1 
+initNun is 4, now len is 1 
+initNun is 3, now len is 1 
+initNun is 2, now len is 1 
+initNun is 1, now len is 1 
+Total number of words is 8
 finish all map task
 start reduce task
 Worker finished
+Total number of words is 8
 finish all map task
 start reduce task
-Worker finished
 Worker started
 receive zero file for map, finish mapping
 finish all map task
@@ -68,8 +124,6 @@ Worker started
 receive zero file for map, finish mapping
 finish all map task
 start reduce task
-Worker finished
-Worker finished
 --- map jobs ran incorrect number of times (10 != 8)
 --- job count test: FAIL
 *** Starting early exit test.
@@ -79,44 +133,49 @@ Coordinator started
 Worker started
 Worker started
 Worker started
+initNun is 8, now len is 1 
+initNun is 7, now len is 1 
+initNun is 6, now len is 1 
+initNun is 5, now len is 1 
+initNun is 4, now len is 1 
+initNun is 3, now len is 1 
+initNun is 2, now len is 1 
+initNun is 1, now len is 1 
+Total number of words is 8
+receive zero file for map, finish mapping
 finish all map task
 start reduce task
 finish all map task
 start reduce task
+Total number of words is 8
 finish all map task
 start reduce task
 Worker finished
-Worker finished
-Worker finished
---- early exit test: PASS
+--- output changed after first worker exited
+--- early exit test: FAIL
 *** Starting crash test.
+Correct Total number of words is 32
 Starting coordinator
 Server listening...
 Coordinator started
 Worker started
 Worker started
 Worker started
+initNun is 8, now len is 4 
+Worker started
+initNun is 7, now len is 4 
 Worker started
 Worker started
 Worker started
-finish all map task
-start reduce task
+initNun is 6, now len is 4 
+initNun is 5, now len is 4 
+initNun is 4, now len is 4 
 Worker started
-receive zero file for map, finish mapping
-finish all map task
-start reduce task
-finish all map task
-start reduce task
+initNun is 3, now len is 4 
 Worker started
-receive zero file for map, finish mapping
-finish all map task
-start reduce task
-Worker started
-receive zero file for map, finish mapping
-finish all map task
-start reduce task
-Worker started
-receive zero file for map, finish mapping
+initNun is 2, now len is 4 
+initNun is 1, now len is 4 
+Total number of words is 32
 finish all map task
 start reduce task
 Worker started
@@ -131,6 +190,34 @@ Worker started
 receive zero file for map, finish mapping
 finish all map task
 start reduce task
+Total number of words is 32
+finish all map task
+start reduce task
+Total number of words is 32
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
 finish all map task
 start reduce task
 Worker started
@@ -142,7 +229,13 @@ Worker started
 receive zero file for map, finish mapping
 finish all map task
 start reduce task
-mr-crash-all mr-correct-crash.txt differ: byte 32, line 1
---- crash output is not the same as mr-correct-crash.txt
---- crash test: FAIL
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+Worker started
+receive zero file for map, finish mapping
+finish all map task
+start reduce task
+--- crash test: PASS
 *** FAILED SOME TESTS

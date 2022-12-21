@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"sync"
 )
 
 var filePathList []string
 var index int
 var IntermediateMap []KeyValue
 var flag bool = false
+var mux sync.Mutex
+var isReduce bool = false
 
 func DeleteSlice(a []string, elem string) []string {
 	j := 0
@@ -44,10 +47,12 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 
 func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveReply) error {
 
+	mux.Lock()
 	if len(filePathList) > 0 {
 		index = (index + 1) % len(filePathList)
 		reply.FilePathList = append(reply.FilePathList, filePathList[index])
 	} 
+	mux.Unlock()
 	
 	return nil
 }
@@ -56,25 +61,36 @@ func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveRe
 // 传入完成的文件id，kva结果
 func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) error {
 
+	mux.Lock()
+	
+	initLen := len(filePathList)
 	for _, file := range args.FilePathList {
 			filePathList = DeleteSlice(filePathList, file)
 	}
-	IntermediateMap = append(IntermediateMap, args.Kva...)
+	if len(filePathList) < initLen {
+		fmt.Printf("initNun is %d, now len is %d \n", initLen, len(args.Kva))
+		IntermediateMap = append(IntermediateMap, args.Kva...)
+	}
 
 	// fmt.Println("Remining " + strconv.Itoa(len(filePathList)) + " files")
 	
 	if len(filePathList) == 0 {
 		reply.IsDone = true
+		fmt.Printf("Total number of words is %d\n", len(IntermediateMap))
 	} else {
 		reply.IsDone = false
 	}
+	mux.Unlock()
 
 	return nil
 }
 
 func (c *Coordinator) StartReduce(args *StartReduceArgs, reply *StartReduceReply) error {
-
-	reply.Kva = IntermediateMap
+	if isReduce == true {
+ 	} else {
+		reply.Kva = IntermediateMap
+		isReduce = true
+	}	
 	return nil
 }
 

@@ -52,6 +52,7 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	for isDone != true {
 
+		kva = make([]KeyValue, 0)
 		// 1. notice coordinator and receive the file name
 		// CallExample()
 		filePathList := CallWorkerActive()
@@ -61,7 +62,6 @@ func Worker(mapf func(string, string) []KeyValue,
 		}
 		// 2. do map process
 		
-
 		for _, filePath := range filePathList {
 			
 			file, err := os.Open(filePath)
@@ -88,6 +88,10 @@ func Worker(mapf func(string, string) []KeyValue,
 	// 4. start reduce task
 	fmt.Println("start reduce task")
 	kva = CallStartReduce()
+
+	if len(kva) == 0 {
+		return
+	}
 
 	// 5. type Sort
 	sort.Sort(ByKey(kva))
