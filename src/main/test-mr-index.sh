@@ -48,8 +48,8 @@ sleep 1
 
 # start multiple workers.
 timeout -k 2s 180s ../mrworker ../../mrapps/wc.so &
-# timeout -k 2s 180s ../mrworker ../../mrapps/wc.so &
-# timeout -k 2s 180s ../mrworker ../../mrapps/wc.so &
+timeout -k 2s 180s ../mrworker ../../mrapps/wc.so &
+timeout -k 2s 180s ../mrworker ../../mrapps/wc.so &
 
 # wait for the coordinator to exit.
 wait $pid
@@ -59,12 +59,43 @@ wait $pid
 sort mr-out* | grep . > mr-wc-all
 if cmp mr-wc-all mr-correct-wc.txt
 then
-	  echo '---' wc test: PASS
-  else
-	    echo '---' wc output is not the same as mr-correct-wc.txt
-	      echo '---' wc test: FAIL
-	        failed_any=1
+  echo '---' wc test: PASS
+else
+  echo '---' wc output is not the same as mr-correct-wc.txt
+  echo '---' wc test: FAIL
+  failed_any=1
 fi
 
 # wait for remaining workers and coordinator to exit.
 wait
+
+#########################################################
+# now indexer
+rm -f mr-*
+
+# generate the correct output
+../mrsequential ../../mrapps/indexer.so ../pg*txt || exit 1
+sort mr-out-0 > mr-correct-indexer.txt
+rm -f mr-out*
+
+echo '***' Starting indexer test.
+
+timeout -k 2s 180s ../mrcoordinator ../pg*txt &
+sleep 1
+
+# start multiple workers
+timeout -k 2s 180s ../mrworker ../../mrapps/indexer.so &
+timeout -k 2s 180s ../mrworker ../../mrapps/indexer.so
+
+sort mr-out* | grep . > mr-indexer-all
+if cmp mr-indexer-all mr-correct-indexer.txt
+then
+  echo '---' indexer test: PASS
+else
+  echo '---' indexer output is not the same as mr-correct-indexer.txt
+  echo '---' indexer test: FAIL
+  failed_any=1
+fi
+
+wait
+

@@ -1,13 +1,13 @@
 package mr
 
 import (
+	"crypto/rand"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
-	"sort"
 )
 
 // for sorting by key.
@@ -36,6 +36,12 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
+func GetRandomString2(n int) string {
+	randBytes := make([]byte, n/2)
+	rand.Read(randBytes)
+	return fmt.Sprintf("%x", randBytes)
+}
+
 
 //
 // main/mrworker.go calls this function.
@@ -46,18 +52,19 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 
 	fmt.Println("Worker started")
-	isDone := false
+	isMapDone := false
 	var kva []KeyValue
 	// var reduceResult []KeyValue
 
-	for isDone != true {
+	for isMapDone != true {
 
 		kva = make([]KeyValue, 0)
 		// 1. notice coordinator and receive the file name
 		// CallExample()
 		filePathList := CallWorkerActive()
+		fmt.Printf("receive %d mapping file\n", len(filePathList))
 		if len(filePathList) == 0 {
-			fmt.Println("receive zero file for map, finish mapping")
+			
 			break;
 		}
 		// 2. do map process
@@ -78,7 +85,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		}
 
 		// 3. report done
-		isDone = CallFinishMap(filePathList, kva)
+		isMapDone = CallFinishMap(filePathList, kva)
 		
 	} 
 
@@ -87,37 +94,60 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	// 4. start reduce task
 	fmt.Println("start reduce task")
-	kva = CallStartReduce()
-
-	if len(kva) == 0 {
-		return
-	}
+	
 
 	// 5. type Sort
-	sort.Sort(ByKey(kva))
+	// sort.Sort(ByKey(kva))
 
-	oname := "mr-out-0"
-	ofile, _ := os.Create(oname)
+	// 6. reduce
 
-	i := 0
-	for i < len(kva) {
-		j := i + 1
-		for j < len(kva) && kva[j].Key == kva[i].Key {
-			j++
+	isReduceDone := false
+
+	for !isReduceDone {
+		reply := CallStartReduce()
+		if reply.IsDone {
+			isReduceDone = true;
+			break;
+		} 
+
+		// oname := "mr-out-0"
+		// ofile, _ := os.Create(oname)
+
+		fmt.Printf("start reduce task %d with %d kva\n", reply.ReduceId, len(reply.Kva))
+
+		oname := "reduce-result-" + GetRandomString2(5)
+		ofile, _ := os.Create(oname)
+
+		i := 0
+		for i < len(reply.Kva) {
+			j := i + 1
+			for j < len(reply.Kva) && reply.Kva[j].Key == reply.Kva[i].Key {
+				j++
+			}
+			if (ihash(reply.Kva[i].Key) % reply.NReduce) == reply.ReduceId {
+				values := []string{}
+				for k := i; k < j; k++ {
+					values = append(values, reply.Kva[k].Value)
+				}
+				output := reducef(reply.Kva[i].Key, values)
+			
+				// this is the correct format for each line of Reduce output.
+				fmt.Fprintf(ofile, "%v %v\n", reply.Kva[i].Key, output)
+			} 
+	
+			i = j
 		}
-		values := []string{}
-		for k := i; k < j; k++ {
-			values = append(values, kva[k].Value)
-		}
-		output := reducef(kva[i].Key, values)
 
-		// this is the correct format for each line of Reduce output.
-		fmt.Fprintf(ofile, "%v %v\n", kva[i].Key, output)
+		ofile.Close()
+		fmt.Printf("finish reduce task %d\n", reply.ReduceId)
 
-		i = j
+		CallFinishReduce(oname, reply.ReduceId)
+
 	}
 
-	CallFinishReduce()
+
+
+	
 	fmt.Println("Worker finished")
 
 	// uncomment to send the Example RPC to the coordinator.
@@ -145,18 +175,20 @@ func CallFinishMap(filePathList []string, kva []KeyValue) bool {
 	return reply.IsDone
 }	
 
-func CallStartReduce() []KeyValue {
+func CallStartReduce() StartReduceReply {
 	args := StartReduceArgs{}
 	reply := StartReduceReply{}
 
 	call("Coordinator.StartReduce", &args, &reply)
 
-	return reply.Kva
+	return reply
 }
 
-func CallFinishReduce()  {
-	args := StartReduceArgs{}
-	reply := StartReduceReply{}
+func CallFinishReduce(oname string, reduceId int)  {
+	args := FinishReduceArgs{}
+	args.OutputFileName = oname
+	args.ReduceId = reduceId
+	reply := FinishReduceReply{}
 	call("Coordinator.FinishReduce", &args, &reply)
 }
 

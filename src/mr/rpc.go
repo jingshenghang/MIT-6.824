@@ -44,15 +44,19 @@ type FinishMapReply struct {
 }
 
 type StartReduceArgs struct {
-	X int
+	
 }
 
 type StartReduceReply struct {
 	Kva []KeyValue
+	NReduce int
+	ReduceId int
+	IsDone bool
 }
 
 type FinishReduceArgs struct {
-	X int
+	OutputFileName string
+	ReduceId int
 }
 
 type FinishReduceReply struct {

@@ -7,15 +7,22 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"sort"
+	"strconv"
 	"sync"
 )
 
 var filePathList []string
-var index int
-var IntermediateMap []KeyValue
+var mapIndex int
+var IntermediateMap []KeyValue // 这个不能调用mr包的吧？
 var flag bool = false
 var mux sync.Mutex
-var isReduce bool = false
+var isReduceFinish bool = false
+var reduceList []bool
+var reduceIndex int
+var finishReduceCount int
+
+
 
 func DeleteSlice(a []string, elem string) []string {
 	j := 0
@@ -30,7 +37,7 @@ func DeleteSlice(a []string, elem string) []string {
 
 type Coordinator struct {
 	// Your definitions here.
-
+	nReduce int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -49,8 +56,8 @@ func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveRe
 
 	mux.Lock()
 	if len(filePathList) > 0 {
-		index = (index + 1) % len(filePathList)
-		reply.FilePathList = append(reply.FilePathList, filePathList[index])
+		mapIndex = (mapIndex + 1) % len(filePathList)
+		reply.FilePathList = append(reply.FilePathList, filePathList[mapIndex])
 	} 
 	mux.Unlock()
 	
@@ -68,7 +75,6 @@ func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) erro
 			filePathList = DeleteSlice(filePathList, file)
 	}
 	if len(filePathList) < initLen {
-		fmt.Printf("initNun is %d, now len is %d \n", initLen, len(args.Kva))
 		IntermediateMap = append(IntermediateMap, args.Kva...)
 	}
 
@@ -76,27 +82,79 @@ func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) erro
 	
 	if len(filePathList) == 0 {
 		reply.IsDone = true
-		fmt.Printf("Total number of words is %d\n", len(IntermediateMap))
 	} else {
 		reply.IsDone = false
 	}
 	mux.Unlock()
 
+	if reply.IsDone{
+		sort.Sort(ByKey(IntermediateMap))
+	}
+
 	return nil
 }
 
 func (c *Coordinator) StartReduce(args *StartReduceArgs, reply *StartReduceReply) error {
-	if isReduce == true {
+	
+	if !isReduceFinish{
+		mux.Lock()
+
+		tryTimes := 0
+
+		for tryTimes < c.nReduce {
+			fmt.Printf("Reduce tryTimes = %d\n", tryTimes)
+			reduceIndex = (reduceIndex + 1) % c.nReduce
+			if reduceList[reduceIndex] {
+				tryTimes++
+			} else {
+				reply.Kva = IntermediateMap
+				reply.NReduce = c.nReduce
+				reply.ReduceId = reduceIndex
+				break
+			}
+		}
+
+		if(tryTimes == c.nReduce) {
+			reply.IsDone = true
+		}
+
+		mux.Unlock()
  	} else {
-		reply.Kva = IntermediateMap
-		isReduce = true
-	}	
+		reply.IsDone = true
+		isReduceFinish = true
+		
+	}
+
 	return nil
 }
 
 func (c *Coordinator) FinishReduce(args *FinishReduceArgs, reply *FinishReduceReply) error {
 
-	flag = true
+	mux.Lock()
+	if !reduceList[args.ReduceId] {
+		
+
+		reduceList[args.ReduceId] = true
+		finishReduceCount++
+
+		// 重命名文件
+		err1 := os.Rename(args.OutputFileName, "mr-out-" + strconv.Itoa(args.ReduceId))
+		if err1 != nil {
+			 panic(err1)
+		} else {
+			 fmt.Printf("save reduce task %d\n", args.ReduceId)
+		}
+	
+		if finishReduceCount == c.nReduce {
+			isReduceFinish = true
+		}
+
+	
+	} else {
+		os.Remove(args.OutputFileName)
+	}
+	mux.Unlock()
+
 	return nil
 }
 
@@ -130,7 +188,7 @@ func (c *Coordinator) Done() bool {
 	}
 
 	// for test
-	if flag == true {
+	if flag {
 		ret = true
 	}
 
@@ -151,7 +209,11 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 
 	c := Coordinator{}
 	filePathList = files
-	index = 0
+	mapIndex = 0
+	reduceIndex = 0
+	reduceList = make([]bool, nReduce)
+	c.nReduce = nReduce
+	finishReduceCount = 0
 
 	c.server()
 
