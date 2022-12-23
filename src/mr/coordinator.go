@@ -1,15 +1,44 @@
 package mr
 
-import "log"
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
+import (
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+	"sort"
+	"strconv"
+	"encoding/gob"
+	"sync"
+)
 
+var filePathList []string
+var mapIndex int
+var IntermediateMap []KeyValue // 这个不能调用mr包的吧？
+var mux sync.Mutex
+var isReduceFinish bool = false
+var reduceList []bool
+var reduceIndex int
+var finishReduceCount int
+var IntermediateMapFilePath string
+
+
+
+func DeleteSlice(a []string, elem string) []string {
+	j := 0
+	for _, v := range a {
+		if v != elem {
+			a[j] = v
+			j++
+		}
+	}
+	return a[:j]
+}
 
 type Coordinator struct {
 	// Your definitions here.
-
+	nReduce int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -24,11 +53,133 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	return nil
 }
 
+func (c *Coordinator) ActiveWorker(args *WorkerActiveArgs, reply *WorkerActiveReply) error {
+
+	mux.Lock()
+	if len(filePathList) > 0 {
+		mapIndex = (mapIndex + 1) % len(filePathList)
+		reply.FilePathList = append(reply.FilePathList, filePathList[mapIndex])
+	} 
+	mux.Unlock()
+	
+	return nil
+}
+
+
+// 传入完成的文件id，kva结果
+func (c *Coordinator) FinishMap(args *FinishMapArgs, reply *FinishMapReply) error {
+
+	mux.Lock()
+	
+	initLen := len(filePathList)
+	for _, file := range args.FilePathList {
+			filePathList = DeleteSlice(filePathList, file)
+	}
+	if len(filePathList) < initLen {
+		IntermediateMap = append(IntermediateMap, args.Kva...)
+	}
+
+	// fmt.Println("Remining " + strconv.Itoa(len(filePathList)) + " files")
+	
+	if len(filePathList) == 0 {
+		reply.IsDone = true
+	} else {
+		reply.IsDone = false
+	}
+	
+
+	if reply.IsDone{
+		sort.Sort(ByKey(IntermediateMap))
+
+		// save IntermediateMap
+
+		IntermediateMapFilePath = "IntermediateMap"
+
+		file, err := os.Create(IntermediateMapFilePath)
+		if err != nil {
+			fmt.Println(err)
+		}
+		
+    enc := gob.NewEncoder(file)
+    err2 := enc.Encode(IntermediateMap)
+		fmt.Println(err2)
+		
+	}
+	
+	mux.Unlock()
+
+	return nil
+}
+
+func (c *Coordinator) StartReduce(args *StartReduceArgs, reply *StartReduceReply) error {
+	
+	if !isReduceFinish{
+		mux.Lock()
+
+		tryTimes := 0
+
+		for tryTimes < c.nReduce {
+			fmt.Printf("Reduce tryTimes = %d\n", tryTimes)
+			reduceIndex = (reduceIndex + 1) % c.nReduce
+			if reduceList[reduceIndex] {
+				tryTimes++
+			} else {
+				reply.NReduce = c.nReduce
+				reply.ReduceId = reduceIndex
+				reply.KvaPath = IntermediateMapFilePath
+				break
+			}
+		}
+
+		if(tryTimes == c.nReduce) {
+			reply.IsDone = true
+		}
+
+		mux.Unlock()
+ 	} else {
+		reply.IsDone = true
+		isReduceFinish = true
+		
+	}
+
+	return nil
+}
+
+func (c *Coordinator) FinishReduce(args *FinishReduceArgs, reply *FinishReduceReply) error {
+
+	mux.Lock()
+	if !reduceList[args.ReduceId] {
+		
+
+		reduceList[args.ReduceId] = true
+		finishReduceCount++
+
+		// 重命名文件
+		err1 := os.Rename(args.OutputFileName, "mr-out-" + strconv.Itoa(args.ReduceId))
+		if err1 != nil {
+			 panic(err1)
+		} else {
+			 fmt.Printf("save reduce task %d\n", args.ReduceId)
+		}
+	
+		if finishReduceCount == c.nReduce {
+			isReduceFinish = true
+		}
+
+	
+	} else {
+		os.Remove(args.OutputFileName)
+	}
+	mux.Unlock()
+
+	return nil
+}
 
 //
 // start a thread that listens for RPCs from worker.go
 //
 func (c *Coordinator) server() {
+	fmt.Println("Server listening...")
 	rpc.Register(c)
 	rpc.HandleHTTP()
 	//l, e := net.Listen("tcp", ":1234")
@@ -50,6 +201,12 @@ func (c *Coordinator) Done() bool {
 
 	// Your code here.
 
+	mux.Lock()
+	if len(filePathList) == -1 { // 需不需要加锁？ // 需要修改
+		ret = true
+	}
+
+	mux.Unlock()
 
 	return ret
 }
@@ -60,11 +217,23 @@ func (c *Coordinator) Done() bool {
 // nReduce is the number of reduce tasks to use.
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
+		// Your code here.
+
+
+	fmt.Println("Starting coordinator")
+	// initialization
+
 	c := Coordinator{}
-
-	// Your code here.
-
+	filePathList = files
+	mapIndex = 0
+	reduceIndex = 0
+	reduceList = make([]bool, nReduce)
+	c.nReduce = nReduce
+	finishReduceCount = 0
 
 	c.server()
+
+	fmt.Println("Coordinator started")
 	return &c
 }
+
