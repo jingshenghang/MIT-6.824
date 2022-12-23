@@ -1,0 +1,38 @@
+
+Attemp1 with lock 
+
+time: 3m32.527s
+
+--- map parallelism test: PASS
+--- reduce parallelism test: PASS
+--- early exit test: PASS
+--- wc test: FAIL
+--- indexer test: FAIL
+--- job count test: FAIL
+--- crash test: FAIL
+*** FAILED SOME TESTS
+
+Attemp 2 pass wc test
+
+time: 1m53.859s 
+
+
+--- wc test: PASS
+--- map parallelism test: PASS
+--- crash test: PASS
+--- indexer test: FAIL
+--- reduce parallelism test: FAIL
+--- job count test: FAIL
+--- early exit test: FAIL
+*** FAILED SOME TESTS
+
+Attemp 3 pass all task except job count
+
+--- wc test: PASS
+--- indexer test: PASS
+--- map parallelism test: PASS
+--- reduce parallelism test: PASS
+--- early exit test: PASS
+--- crash test: PASS
+--- job count test: FAIL
+
